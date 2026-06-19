@@ -310,6 +310,97 @@ sortBy (createdAt|priority|slaDeadline), sortDir (asc|desc)
 
 ---
 
+## Преобразования данных
+
+Описывает как данные меняются при прохождении через систему.
+
+### Уровень 1 — поток запроса (высокий уровень)
+
+```
+Браузер (React)
+  → HTTP-запрос с JWT в заголовке
+  → ASP.NET Core Middleware (проверка токена, роли)
+  → Controller (валидация тела запроса)
+  → Service (бизнес-логика)
+  → EF Core (SQL-запрос к SQLite)
+  → DTO (маппинг Entity → объект ответа)
+  → JSON-ответ обратно в браузер
+```
+
+### Уровень 2 — конкретные преобразования в коде
+
+**Регистрация / вход:**
+```
+password (plaintext)
+  → BCrypt.HashPassword()
+  → passwordHash (необратимый хеш, хранится в БД)
+
+user.id + user.role + user.username
+  → JwtSecurityToken (HMAC-SHA256, срок 24ч)
+  → jwt_token (строка, отдаётся клиенту)
+```
+
+**Создание тикета:**
+```
+CreateTicketRequest { title, description, categoryId, priority }
+  → валидация (Required, MinLength, Range)
+  → Ticket { Id, Number="#{Id}", Status=new, CreatedAt=UtcNow }
+  → SLA расчёт: CreatedAt + SlaConfig.ResolutionHours → SlaDeadline
+  → HistoryEntry { field="status", oldValue=null, newValue="new" }
+  → TicketDto (Entity → DTO, убираем внутренние поля)
+```
+
+**Смена статуса:**
+```
+PATCH /tickets/{id}/status { status, comment }
+  → TicketStateMachine.IsAllowed(currentStatus, newStatus)
+      → false: 409 Conflict
+      → true: ticket.Status = newStatus
+  → если newStatus == "waiting": ticket.SlaPaused = true, сохраняем SlaPausedAt
+  → если newStatus == "in_progress" и было waiting: возобновляем SLA (сдвигаем SlaDeadline)
+  → HistoryEntry { field="status", oldValue, newValue, comment }
+  → AuditLog { action="status:{newStatus}", entityType="ticket" }
+```
+
+**Назначение исполнителя:**
+```
+PATCH /tickets/{id}/assignee { assigneeId }
+  → загружаем старого и нового исполнителя из БД
+  → ticket.AssigneeId = assigneeId
+  → HistoryEntry { field="assignee", oldValue=oldUsername, newValue=newUsername }
+```
+
+**Автоназначение при взятии в работу:**
+```
+если newStatus == "in_progress" && ticket.AssigneeId == null
+  → ticket.AssigneeId = currentUserId (тот кто нажал кнопку)
+  → HistoryEntry { field="assignee", oldValue=null, newValue=currentUsername }
+```
+
+**GET /tickets — фильтрация для заявителя (ОБ-8):**
+```
+JWT claim "role" == "applicant"
+  → query.Where(t => t.AuthorId == currentUserId)
+  → заявитель получает только свои тикеты
+```
+
+**Комментарии — фильтрация внутренних (ОБ-8):**
+```
+JWT claim "role" == "applicant"
+  → query.Where(c => !c.IsInternal)
+  → внутренние комментарии не попадают в ответ
+```
+
+**Отчёт по нагрузке на исполнителей:**
+```
+Tickets (AssigneeId != null)
+  → GroupBy(t => t.AssigneeId) → { AssigneeId, Count }
+  → отдельный запрос: Users.Where(id in userIds) → словарь id→username
+  → соединяем: ExecutorLoadDto { executorId, username, count }
+```
+
+---
+
 ## Формат ошибок
 
 ```json
