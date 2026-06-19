@@ -10,6 +10,10 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Railway задаёт переменную PORT динамически — слушаем на ней
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls("http://0.0.0.0:" + port);
+
 // Database
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlite(builder.Configuration.GetConnectionString("Default")));
@@ -80,5 +84,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseStaticFiles();
 app.MapControllers();
+
+// Railway healthcheck — без авторизации
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 app.Run();

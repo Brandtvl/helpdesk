@@ -4,5 +4,5 @@ buildCommand = ""
 
 [deploy]
 startCommand = ""
-healthcheckPath = "/api/categories"
+healthcheckPath = "/health"
 restartPolicyType = "on_failure"
