@@ -1,148 +1,120 @@
-# Helpdesk — система учёта обращений (Проект 02)
+# Helpdesk — система учёта обращений
 
-**Состав:** Низамаев (фронт, C#) · Брандт (бэк)
+Проект 02. Низамаев (фронтенд) · Брандт (бэкенд)
 
----
+## Что это
 
-## Архитектура
+Система для подачи и обработки обращений (тикетов). Три роли: заявитель, исполнитель, администратор. Бэкенд на ASP.NET Core 10 + SQLite, фронтенд на React + Vite.
 
 ```
 helpdesk/
-  backend/   — ASP.NET Core 10 Web API (C#)
-  tests/     — xUnit тесты бизнес-логики
-  frontend/  — клиентская часть (напарник)
+  backend/    — C# Web API
+  frontend/   — React SPA
+  tests/      — xUnit тесты (37 штук)
+  Dockerfile  — для деплоя на Railway
+  start.bat   — запуск локально одним кликом
 ```
 
-Бэкенд и фронтенд — **независимые приложения**, общаются через REST API.
+## Запуск локально
 
----
+Двойной клик на `start.bat` — откроет два окна и браузер.
 
-## Стек бэкенда
-
-| Технология | Назначение |
-|---|---|
-| ASP.NET Core 10 | HTTP-сервер, роутинг, авторизация |
-| Entity Framework Core + SQLite | Хранение данных |
-| JWT Bearer | Аутентификация |
-| BCrypt.Net | Хеширование паролей |
-| xUnit | Автотесты |
-
----
-
-## Требования
-
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
-
----
-
-## Запуск бэкенда
+Или вручную:
 
 ```bash
+# терминал 1
 cd backend
-dotnet run
+dotnet run        # http://localhost:8080
+
+# терминал 2
+cd frontend
+npm install
+npm run dev       # http://localhost:5173
 ```
 
-API будет доступно на: `http://localhost:5292`
+При первом запуске бэкенд сам создаёт базу данных, применяет миграции и добавляет начальные данные (категории, SLA-нормативы).
 
-При первом запуске автоматически:
-- Создаётся база данных `helpdesk.db`
-- Применяются миграции
-- Добавляются начальные данные (SLA-нормативы, базовые категории)
+## Тестовые аккаунты
 
----
+| Роль | Email | Пароль |
+|---|---|---|
+| Администратор | admin@helpdesk.ru | admin123 |
+| Исполнитель | executor@helpdesk.ru | exec123 |
 
-## Запуск тестов
+Заявители регистрируются сами через `/register`.
 
-```bash
-cd tests
-dotnet test
-```
+## Продакшн
 
-Запускает 37 тестов: машина состояний, SLA-логика.
+Бэкенд: https://helpdesk-production-6466.up.railway.app
 
----
+Фронтенд: развёрнут на web.ru
 
 ## API
 
-**Base URL:** `http://localhost:5292/api`
+Base URL локально: `http://localhost:8080/api`
 
-**Авторизация:** Bearer JWT в заголовке:
-```
-Authorization: Bearer <token>
-```
+Авторизация: `Authorization: Bearer <token>`
 
-### Роли
-| Значение | Роль |
-|---|---|
-| `applicant` | Заявитель |
-| `executor` | Исполнитель |
-| `admin` | Администратор |
+Роли:
+- `applicant` — видит только свои тикеты, создаёт обращения
+- `executor` — видит все тикеты, берёт в работу, меняет статус
+- `admin` — всё выше + управление пользователями, категориями, SLA, отчёты
 
-### Основные эндпоинты
+Основные эндпоинты:
 
 | Метод | Путь | Описание |
 |---|---|---|
-| POST | `/auth/register` | Регистрация |
-| POST | `/auth/login` | Вход, получение токена |
-| GET | `/tickets` | Список тикетов (фильтры, пагинация) |
-| POST | `/tickets` | Создать тикет |
-| GET | `/tickets/{id}` | Карточка тикета |
-| PATCH | `/tickets/{id}/status` | Сменить статус |
-| PATCH | `/tickets/{id}/assignee` | Назначить исполнителя |
-| POST | `/tickets/bulk` | Массовые операции |
-| GET | `/tickets/my` | Мои тикеты |
-| GET | `/tickets/{id}/comments` | Комментарии |
-| POST | `/tickets/{id}/comments` | Добавить комментарий |
-| GET | `/tickets/{id}/history` | История изменений |
-| POST | `/tickets/{id}/files` | Загрузить файл |
-| POST | `/tickets/{id}/dependencies` | Добавить блокировку (FR-23) |
-| DELETE | `/tickets/{id}/dependencies/{blockerId}` | Удалить блокировку |
-| GET | `/categories` | Категории |
-| POST | `/categories` | Создать категорию (admin) |
-| DELETE | `/categories/{id}` | Удалить категорию (admin) |
-| GET | `/sla` | SLA-нормативы |
-| PUT | `/sla/{priority}` | Обновить норматив (admin) |
-| GET | `/reports/by-status` | Отчёт по статусам |
-| GET | `/reports/avg-resolution` | Среднее время решения |
-| GET | `/reports/executor-load` | Нагрузка на исполнителей |
-| GET | `/admin/users` | Список пользователей (admin) |
-| PATCH | `/admin/tickets/{id}/force` | Принудительная смена (admin) |
+| POST | /auth/register | Регистрация |
+| POST | /auth/login | Вход |
+| GET | /tickets | Список тикетов с фильтрами |
+| POST | /tickets | Создать тикет |
+| GET | /tickets/my | Мои тикеты |
+| GET | /tickets/{id} | Карточка тикета |
+| PATCH | /tickets/{id}/status | Сменить статус |
+| PATCH | /tickets/{id}/assignee | Назначить исполнителя |
+| POST | /tickets/bulk | Массовые операции |
+| GET | /tickets/{id}/comments | Комментарии |
+| POST | /tickets/{id}/comments | Добавить комментарий |
+| GET | /tickets/{id}/history | История изменений |
+| POST | /tickets/{id}/files | Прикрепить файл |
+| POST | /tickets/{id}/dependencies | Добавить блокировку (FR-23) |
+| DELETE | /tickets/{id}/dependencies/{blockerId} | Убрать блокировку |
+| GET | /categories | Категории |
+| POST | /categories | Создать категорию (admin) |
+| DELETE | /categories/{id} | Удалить категорию (admin) |
+| GET | /sla | SLA-нормативы |
+| PUT | /sla/{priority} | Обновить норматив (admin) |
+| GET | /reports/by-status | Отчёт по статусам |
+| GET | /reports/avg-resolution | Среднее время решения |
+| GET | /reports/executor-load | Нагрузка на исполнителей |
+| GET | /admin/users | Список пользователей (admin) |
+| PATCH | /admin/tickets/{id}/force | Принудительная смена (admin) |
 
-### Статусы тикета
+Машина состояний тикета:
+
 ```
 new → in_progress → waiting → in_progress
                  → resolved → closed
                             → in_progress (reopen)
 closed → in_progress (reopen)
 ```
-Недопустимый переход возвращает **409 Conflict**.
 
-### Приоритеты и SLA по умолчанию
+Недопустимый переход возвращает 409 Conflict.
+
+SLA-нормативы по умолчанию:
+
 | Приоритет | Реакция | Решение |
 |---|---|---|
-| `low` | 8 ч | 72 ч |
-| `medium` | 4 ч | 24 ч |
-| `high` | 2 ч | 8 ч |
-| `critical` | 30 мин | 4 ч |
+| low | 8 ч | 72 ч |
+| medium | 4 ч | 24 ч |
+| high | 2 ч | 8 ч |
+| critical | 30 мин | 4 ч |
 
----
+SLA приостанавливается когда тикет в статусе `waiting` (FR-24).
 
-## Пример: регистрация и создание тикета
+## Тесты
 
 ```bash
-# 1. Регистрация
-curl -X POST http://localhost:5292/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"ivan","email":"ivan@example.com","password":"123456","role":"applicant"}'
-
-# 2. Вход
-curl -X POST http://localhost:5292/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"ivan@example.com","password":"123456"}'
-
-# 3. Создать тикет (token из шага 2)
-curl -X POST http://localhost:5292/api/tickets \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Не работает принтер","description":"Принтер не печатает","categoryId":2,"priority":"high"}'
+cd tests
+dotnet test
 ```
