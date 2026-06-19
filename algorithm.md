@@ -89,77 +89,77 @@
 
 ## 2. ТИПЫ ДАННЫХ
 
-Тип — из набора: целое, дробное, строка, дата-время, булево, перечисление, ссылка.
-
 ### Пользователь (User)
 
-| № | Название поля | Тип |
+| № | Название поля | Тип C# |
 |---|---|---|
-| 01 | id | целое |
-| 02 | username | строка |
-| 03 | email | строка |
-| 04 | passwordHash | строка |
-| 05 | role | перечисление |
-| 06 | createdAt | дата-время |
+| 01 | Id | int |
+| 02 | Username | string |
+| 03 | Email | string |
+| 04 | PasswordHash | string |
+| 05 | Role | enum Role |
+| 06 | CreatedAt | DateTime |
 
 ### Обращение (Ticket)
 
-| № | Название поля | Тип |
+| № | Название поля | Тип C# |
 |---|---|---|
-| 01 | id | целое |
-| 02 | number | строка |
-| 03 | title | строка |
-| 04 | description | строка |
-| 05 | status | перечисление |
-| 06 | priority | перечисление |
-| 07 | categoryId | ссылка |
-| 08 | authorId | ссылка |
-| 09 | assigneeId | ссылка |
-| 10 | createdAt | дата-время |
-| 11 | slaDeadline | дата-время |
-| 12 | slaBreached | булево |
-| 13 | slaPaused | булево |
+| 01 | Id | int |
+| 02 | Number | string |
+| 03 | Title | string |
+| 04 | Description | string |
+| 05 | Status | enum TicketStatus |
+| 06 | Priority | enum Priority |
+| 07 | CategoryId | int |
+| 08 | AuthorId | int |
+| 09 | AssigneeId | int? |
+| 10 | CreatedAt | DateTime |
+| 11 | SlaDeadline | DateTime |
+| 12 | SlaBreached | bool |
+| 13 | SlaPaused | bool |
+| 14 | SlaPausedAt | DateTime? |
+| 15 | SlaPausedTotal | TimeSpan |
 
 ### Комментарий (Comment)
 
-| № | Название поля | Тип |
+| № | Название поля | Тип C# |
 |---|---|---|
-| 01 | id | целое |
-| 02 | ticketId | ссылка |
-| 03 | authorId | ссылка |
-| 04 | text | строка |
-| 05 | isInternal | булево |
-| 06 | createdAt | дата-время |
+| 01 | Id | int |
+| 02 | TicketId | int |
+| 03 | AuthorId | int |
+| 04 | Text | string |
+| 05 | IsInternal | bool |
+| 06 | CreatedAt | DateTime |
 
 ### Запись истории (HistoryEntry)
 
-| № | Название поля | Тип |
+| № | Название поля | Тип C# |
 |---|---|---|
-| 01 | id | целое |
-| 02 | ticketId | ссылка |
-| 03 | authorId | ссылка |
-| 04 | field | строка |
-| 05 | oldValue | строка |
-| 06 | newValue | строка |
-| 07 | comment | строка |
-| 08 | createdAt | дата-время |
+| 01 | Id | int |
+| 02 | TicketId | int |
+| 03 | AuthorId | int |
+| 04 | Field | string |
+| 05 | OldValue | string? |
+| 06 | NewValue | string |
+| 07 | Comment | string? |
+| 08 | CreatedAt | DateTime |
 
 ### Норматив SLA (SlaConfig)
 
-| № | Название поля | Тип |
+| № | Название поля | Тип C# |
 |---|---|---|
-| 01 | id | целое |
-| 02 | priority | перечисление |
-| 03 | reactionHours | дробное |
-| 04 | resolutionHours | дробное |
+| 01 | Id | int |
+| 02 | Priority | enum Priority |
+| 03 | ReactionHours | int |
+| 04 | ResolutionHours | int |
 
-### Перечисления
+### Перечисления (enum)
 
-| Поле | Допустимые значения |
-|---|---|
-| role | applicant, executor, admin |
-| status | new, in_progress, waiting, resolved, closed |
-| priority | low, medium, high, critical |
+```csharp
+enum Role         { Applicant, Executor, Admin }
+enum TicketStatus { New, InProgress, Waiting, Resolved, Closed }
+enum Priority     { Low, Medium, High, Critical }
+```
 
 ---
 
@@ -171,66 +171,66 @@
 
 | Исходные данные | | Правило преобразования | Итоговые данные | |
 |---|---|---|---|---|
-| **Поле** | **Тип** | **Как получается** | **Поле** | **Тип** |
-| id | целое | Записывается в claim "sub" | token | строка |
-| username | строка | Записывается в claim "name" | — | — |
-| role | перечисление | Записывается в claim "role" | — | — |
-| Jwt:Key (конфиг) | строка | HMAC-SHA256 подпись, срок 24 часа | — | — |
+| **Поле** | **Тип C#** | **Как получается** | **Поле** | **Тип C#** |
+| Id | int | Записывается в claim "sub" | token | string |
+| Username | string | Записывается в claim "name" | — | — |
+| Role | enum Role | Записывается в claim "role" | — | — |
+| Jwt:Key (конфиг) | string | HMAC-SHA256 подпись, срок 24 часа | — | — |
 
 ### П-2. Расчёт SLA-дедлайна при создании тикета
 
 | Исходные данные | | Правило преобразования | Итоговые данные | |
 |---|---|---|---|---|
-| **Поле** | **Тип** | **Как получается** | **Поле** | **Тип** |
-| createdAt | дата-время | Дата создания тикета | slaDeadline | дата-время |
-| priority | перечисление | По приоритету берём resolutionHours из SlaConfig | — | — |
-| resolutionHours | дробное | slaDeadline = createdAt + resolutionHours | — | — |
+| **Поле** | **Тип C#** | **Как получается** | **Поле** | **Тип C#** |
+| CreatedAt | DateTime | Дата создания тикета | SlaDeadline | DateTime |
+| Priority | enum Priority | По приоритету берём ResolutionHours из SlaConfig | — | — |
+| ResolutionHours | int | SlaDeadline = CreatedAt + TimeSpan.FromHours(ResolutionHours) | — | — |
 
 ### П-3. Проверка допустимости перехода статуса
 
 | Исходные данные | | Правило преобразования | Итоговые данные | |
 |---|---|---|---|---|
-| **Поле** | **Тип** | **Как получается** | **Поле** | **Тип** |
-| currentStatus | перечисление | Текущий статус тикета | allowed | булево |
-| newStatus | перечисление | ЕСЛИ (current→new) есть в таблице переходов ТО true ИНАЧЕ false | — | — |
+| **Поле** | **Тип C#** | **Как получается** | **Поле** | **Тип C#** |
+| Status (текущий) | enum TicketStatus | Текущий статус тикета | allowed | bool |
+| newStatus | enum TicketStatus | ЕСЛИ (current→new) есть в таблице переходов ТО true ИНАЧЕ false | — | — |
 
 Таблица допустимых переходов:
 
 | Из | В |
 |---|---|
-| new | in_progress |
-| in_progress | waiting, resolved |
-| waiting | in_progress |
-| resolved | closed, in_progress |
-| closed | in_progress |
+| New | InProgress |
+| InProgress | Waiting, Resolved |
+| Waiting | InProgress |
+| Resolved | Closed, InProgress |
+| Closed | InProgress |
 
 ### П-4. Хеширование пароля при регистрации
 
 | Исходные данные | | Правило преобразования | Итоговые данные | |
 |---|---|---|---|---|
-| **Поле** | **Тип** | **Как получается** | **Поле** | **Тип** |
-| password | строка | BCrypt.HashPassword(password, workFactor=12) | passwordHash | строка |
+| **Поле** | **Тип C#** | **Как получается** | **Поле** | **Тип C#** |
+| password | string | BCrypt.Net.BCrypt.HashPassword(password, workFactor=12) | PasswordHash | string |
 
 ### П-5. Фильтрация тикетов по роли (ОБ-8)
 
 | Исходные данные | | Правило преобразования | Итоговые данные | |
 |---|---|---|---|---|
-| **Поле** | **Тип** | **Как получается** | **Поле** | **Тип** |
-| role | перечисление | ЕСЛИ role == applicant ТО фильтр authorId == currentUserId | items | ссылка |
-| currentUserId | целое | ИНАЧЕ возвращаем все тикеты | total | целое |
+| **Поле** | **Тип C#** | **Как получается** | **Поле** | **Тип C#** |
+| Role | enum Role | ЕСЛИ Role == Applicant ТО query.Where(t => t.AuthorId == userId) | items | IEnumerable\<Ticket\> |
+| currentUserId | int | ИНАЧЕ возвращаем все тикеты | total | int |
 
 ### П-6. Расчёт среднего времени решения (отчёт)
 
 | Исходные данные | | Правило преобразования | Итоговые данные | |
 |---|---|---|---|---|
-| **Поле** | **Тип** | **Как получается** | **Поле** | **Тип** |
-| resolvedAt | дата-время | Момент перехода в статус resolved | avgHours | дробное |
-| createdAt | дата-время | (resolvedAt − createdAt).TotalHours, среднее по всем тикетам | — | — |
+| **Поле** | **Тип C#** | **Как получается** | **Поле** | **Тип C#** |
+| CreatedAt (история) | DateTime | Момент перехода в статус Resolved | avgHours | double |
+| CreatedAt (тикет) | DateTime | (resolvedAt − ticketCreatedAt).TotalHours, среднее по всем | — | — |
 
 ### П-7. Пауза и возобновление SLA (FR-24)
 
 | Исходные данные | | Правило преобразования | Итоговые данные | |
 |---|---|---|---|---|
-| **Поле** | **Тип** | **Как получается** | **Поле** | **Тип** |
-| newStatus | перечисление | ЕСЛИ newStatus == waiting ТО slaPaused = true | slaPaused | булево |
-| slaPausedAt | дата-время | ЕСЛИ возврат в in_progress ТО slaDeadline += (now − slaPausedAt) | slaDeadline | дата-время |
+| **Поле** | **Тип C#** | **Как получается** | **Поле** | **Тип C#** |
+| newStatus | enum TicketStatus | ЕСЛИ newStatus == Waiting ТО SlaPaused = true, SlaPausedAt = DateTime.UtcNow | SlaPaused | bool |
+| SlaPausedAt | DateTime? | ЕСЛИ возврат в InProgress ТО SlaDeadline += (DateTime.UtcNow − SlaPausedAt) | SlaDeadline | DateTime |
