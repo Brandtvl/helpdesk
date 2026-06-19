@@ -22,6 +22,9 @@ function Header() {
         <nav className="header-nav">
           <Link to="/tickets">Обращения</Link>
           <Link to="/tickets/new">+ Создать</Link>
+          {user && user.role === 'admin' && (
+            <Link to="/admin">Панель админа</Link>
+          )}
         </nav>
 
         <div className="header-user">

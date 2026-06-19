@@ -47,15 +47,16 @@ public class ReportsController(AppDbContext db) : ControllerBase
         if (from.HasValue) query = query.Where(h => h.CreatedAt >= from.Value);
         if (to.HasValue)   query = query.Where(h => h.CreatedAt <= to.Value);
 
+        // выбираем только нужные поля чтобы не тащить всё через Include
         var resolved = await query
-            .Include(h => h.Ticket)
+            .Select(h => new { h.CreatedAt, TicketCreatedAt = h.Ticket.CreatedAt })
             .ToListAsync();
 
         if (!resolved.Any()) return Ok(new AvgResolutionDto(0));
 
         // считаем среднее в часах
         var avgHours = resolved
-            .Select(h => (h.CreatedAt - h.Ticket.CreatedAt).TotalHours)
+            .Select(h => (h.CreatedAt - h.TicketCreatedAt).TotalHours)
             .Average();
 
         return Ok(new AvgResolutionDto(Math.Round(avgHours, 1)));
@@ -67,18 +68,31 @@ public class ReportsController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> ExecutorLoad([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
         var query = db.Tickets
-            .Where(t => t.AssigneeId != null) // берём только назначенные
-            .Include(t => t.Assignee)
+            .Where(t => t.AssigneeId != null)
             .AsQueryable();
 
         if (from.HasValue) query = query.Where(t => t.CreatedAt >= from.Value);
         if (to.HasValue)   query = query.Where(t => t.CreatedAt <= to.Value);
 
-        var load = await query
-            .GroupBy(t => new { t.AssigneeId, t.Assignee!.Username })
-            .Select(g => new ExecutorLoadDto(g.Key.AssigneeId!.Value, g.Key.Username, g.Count()))
-            .OrderByDescending(l => l.Count)
+        // группируем только по Id - навигационные свойства в GroupBy EF Core не переводит в SQL
+        var grouped = await query
+            .GroupBy(t => t.AssigneeId)
+            .Select(g => new { AssigneeId = g.Key, Count = g.Count() })
             .ToListAsync();
+
+        // имена пользователей подтягиваем отдельным запросом
+        var userIds = grouped.Select(g => g.AssigneeId!.Value).ToList();
+        var users = await db.Users
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.Username);
+
+        var load = grouped
+            .Select(g => new ExecutorLoadDto(
+                g.AssigneeId!.Value,
+                users.GetValueOrDefault(g.AssigneeId.Value, "—"),
+                g.Count))
+            .OrderByDescending(l => l.Count)
+            .ToList();
 
         return Ok(load);
     }

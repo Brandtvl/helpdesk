@@ -27,8 +27,9 @@ export async function request(url, options = {}) {
     headers,
   })
 
-  // если 401 - токен протух, выкидываем на логин
-  if (response.status === 401) {
+  // если 401 на защищённых эндпоинтах - токен протух, выкидываем на логин
+  // для /auth/* не редиректим - там 401 это просто "неверный пароль"
+  if (response.status === 401 && !url.startsWith('/auth/')) {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     window.location.href = '/login'

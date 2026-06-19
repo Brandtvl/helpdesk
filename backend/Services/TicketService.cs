@@ -117,6 +117,10 @@ public class TicketService
 
         ticket.Status = newStatus;
 
+        // FR-10: автоназначение - когда берут в работу, исполнитель назначается автоматически
+        if (newStatus == TicketStatus.InProgress && ticket.AssigneeId == null)
+            ticket.AssigneeId = userId;
+
         // FR-16: обновляем флаг нарушения SLA
         _sla.CheckBreach(ticket);
 

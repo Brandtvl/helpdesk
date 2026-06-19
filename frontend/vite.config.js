@@ -8,7 +8,7 @@ export default defineConfig({
     proxy: {
       // перенаправляем /api запросы на бэкенд
       '/api': {
-        target: 'http://localhost:5292',
+        target: 'http://localhost:8080',
         changeOrigin: true
       }
     }

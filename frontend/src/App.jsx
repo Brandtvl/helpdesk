@@ -4,6 +4,7 @@ import RegisterPage from './pages/RegisterPage'
 import TicketsPage from './pages/TicketsPage'
 import TicketDetailPage from './pages/TicketDetailPage'
 import CreateTicketPage from './pages/CreateTicketPage'
+import AdminPage from './pages/AdminPage'
 
 // защищённый маршрут - если нет токена, редирект на логин
 function PrivateRoute({ children }) {
@@ -32,6 +33,11 @@ function App() {
         <Route
           path="/tickets/:id"
           element={<PrivateRoute><TicketDetailPage /></PrivateRoute>}
+        />
+
+        <Route
+          path="/admin"
+          element={<PrivateRoute><AdminPage /></PrivateRoute>}
         />
 
         {/* по умолчанию - на список обращений */}
