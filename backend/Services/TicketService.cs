@@ -201,7 +201,7 @@ public class TicketService
     public async Task<PagedResult<TicketDto>> GetListAsync(
         string? status, string? priority, int? assigneeId, int? categoryId,
         string? search, bool? slaBreached, int page, int pageSize,
-        string? sortBy, string? sortDir)
+        string? sortBy, string? sortDir, int currentUserId = 0, string? currentRole = null)
     {
         var query = _db.Tickets
             .Include(t => t.Author)
@@ -210,6 +210,10 @@ public class TicketService
             .Include(t => t.BlockedBy)
             .Include(t => t.Blocking)
             .AsQueryable();
+
+        // ОБ-8: заявитель видит только свои обращения — запрет доступа к чужим данным
+        if (currentRole == "applicant")
+            query = query.Where(t => t.AuthorId == currentUserId);
 
         // применяем фильтры если они переданы
         if (!string.IsNullOrEmpty(status))

@@ -44,9 +44,13 @@ public class TicketsController(TicketService ticketService, AppDbContext db, Aud
         [FromQuery] string? sortBy = null,
         [FromQuery] string? sortDir = null)
     {
+        // ОБ-8: заявитель видит только свои тикеты — запрет доступа к чужим данным
+        var userId = User.GetUserId();
+        var role   = User.GetRole();
+
         var result = await ticketService.GetListAsync(
             status, priority, assigneeId, categoryId, search, slaBreached,
-            page, pageSize, sortBy, sortDir);
+            page, pageSize, sortBy, sortDir, userId, role);
         return Ok(result);
     }
 
