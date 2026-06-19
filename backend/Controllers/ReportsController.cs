@@ -31,8 +31,15 @@ public class ReportsController(AppDbContext db) : ControllerBase
             .Select(g => new { Status = g.Key, Count = g.Count() })
             .ToListAsync();
 
-        return Ok(counts.Select(c => new StatusCountDto(
-            TicketStateMachine.Serialize(c.Status), c.Count)));
+        var slaBreached = await query.CountAsync(t => t.SlaBreached);
+
+        var result = counts
+            .Select(c => new StatusCountDto(TicketStateMachine.Serialize(c.Status), c.Count))
+            .ToList();
+
+        result.Add(new StatusCountDto("sla_breached", slaBreached));
+
+        return Ok(result);
     }
 
     // GET /api/reports/avg-resolution?from=date&to=date

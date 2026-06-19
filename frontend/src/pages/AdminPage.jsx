@@ -404,65 +404,87 @@ function AdminPage() {
 
             {!reportsLoading && !reportsError && (
               <div className="reports-grid">
-                {/* По статусам */}
-                <div className="card">
-                  <h2>Распределение по статусам</h2>
-                  <table className="admin-table">
-                    <thead>
-                      <tr><th>Статус</th><th>Кол-во</th></tr>
-                    </thead>
-                    <tbody>
-                      {reportByStatus.map(function(r) {
-                        return (
-                          <tr key={r.status}>
-                            <td>{STATUS_LABELS[r.status] || r.status}</td>
-                            <td><strong>{r.count}</strong></td>
-                          </tr>
-                        )
-                      })}
-                      {reportByStatus.length === 0 && (
-                        <tr><td colSpan={2} className="muted">Нет данных</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
 
-                {/* Среднее время */}
+                {/* Левый блок: по статусам + среднее время */}
                 <div className="card">
-                  <h2>Среднее время решения</h2>
+                  <h2>Обращения по статусам · за период</h2>
+                  {(function() {
+                    var mainRows = reportByStatus.filter(function(r) { return r.status !== 'sla_breached' })
+                    var slaRow   = reportByStatus.find(function(r)   { return r.status === 'sla_breached' })
+                    var maxCount = Math.max(1, ...mainRows.map(function(r) { return r.count }))
+                    return (
+                      <div className="bar-chart">
+                        {mainRows.map(function(r) {
+                          return (
+                            <div key={r.status} className="bar-row">
+                              <span className="bar-label">{STATUS_LABELS[r.status] || r.status}</span>
+                              <div className="bar-track">
+                                <div
+                                  className="bar-fill"
+                                  style={{ width: (r.count / maxCount * 100) + '%' }}
+                                />
+                              </div>
+                              <span className="bar-count">{r.count}</span>
+                            </div>
+                          )
+                        })}
+                        {slaRow && (
+                          <div className="bar-row bar-row-sla">
+                            <span className="bar-label">Просрочено по SLA</span>
+                            <div className="bar-track">
+                              <div
+                                className="bar-fill bar-fill-sla"
+                                style={{ width: (slaRow.count / maxCount * 100) + '%' }}
+                              />
+                            </div>
+                            <span className="bar-count bar-count-sla">{slaRow.count}</span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+
                   {reportAvg !== null && (
-                    <div className="report-big-number">
-                      <span className="big-number">{reportAvg.avgHours}</span>
-                      <span className="big-number-label">часов</span>
+                    <div className="avg-time-box">
+                      <span className="avg-time-label">Среднее время решения</span>
+                      <span className="avg-time-value">{reportAvg.avgHours} ч</span>
+                      <span className="avg-time-note">от создания до статуса "Решено" (FR-20)</span>
                     </div>
                   )}
-                  <p className="muted" style={{ marginTop: '8px' }}>
-                    Считается от создания обращения до перевода в статус "Решено"
-                  </p>
                 </div>
 
-                {/* Нагрузка на исполнителей */}
+                {/* Правый блок: нагрузка на исполнителей */}
                 <div className="card">
                   <h2>Нагрузка на исполнителей</h2>
-                  <table className="admin-table">
-                    <thead>
-                      <tr><th>Исполнитель</th><th>Назначено тикетов</th></tr>
-                    </thead>
-                    <tbody>
-                      {reportLoad.map(function(r) {
-                        return (
-                          <tr key={r.executorId}>
-                            <td>{r.username}</td>
-                            <td><strong>{r.count}</strong></td>
-                          </tr>
-                        )
-                      })}
-                      {reportLoad.length === 0 && (
-                        <tr><td colSpan={2} className="muted">Нет назначенных тикетов</td></tr>
-                      )}
-                    </tbody>
-                  </table>
+                  {reportLoad.length === 0 && <p className="muted">Нет назначенных тикетов</p>}
+                  {(function() {
+                    var maxLoad = Math.max(1, ...reportLoad.map(function(r) { return r.count }))
+                    return (
+                      <div className="bar-chart">
+                        {reportLoad.map(function(r) {
+                          return (
+                            <div key={r.executorId} className="bar-row">
+                              <span className="bar-label">{r.username}</span>
+                              <div className="bar-track">
+                                <div
+                                  className="bar-fill"
+                                  style={{ width: (r.count / maxLoad * 100) + '%' }}
+                                />
+                              </div>
+                              <span className="bar-count">{r.count}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
+
+                  <div className="report-fr-note">
+                    Среднее время решения и распределение по статусам строятся по фактической истории (FR-20).
+                    Справочники и нормативы SLA настраиваются администратором (FR-21).
+                  </div>
                 </div>
+
               </div>
             )}
           </div>

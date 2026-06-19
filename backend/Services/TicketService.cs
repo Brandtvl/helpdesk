@@ -119,7 +119,18 @@ public class TicketService
 
         // FR-10: автоназначение - когда берут в работу, исполнитель назначается автоматически
         if (newStatus == TicketStatus.InProgress && ticket.AssigneeId == null)
+        {
             ticket.AssigneeId = userId;
+            _db.HistoryEntries.Add(new HistoryEntry
+            {
+                TicketId  = ticket.Id,
+                AuthorId  = userId,
+                Field     = "assignee",
+                OldValue  = null,
+                NewValue  = username,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
 
         // FR-16: обновляем флаг нарушения SLA
         _sla.CheckBreach(ticket);
@@ -153,14 +164,28 @@ public class TicketService
         var oldAssigneeId = ticket.AssigneeId;
         ticket.AssigneeId = assigneeId;
 
-        // FR-12: записываем изменение исполнителя в историю
+        // подтягиваем имена для читаемой истории
+        string? oldName = null;
+        if (oldAssigneeId.HasValue)
+        {
+            var oldUser = await _db.Users.FindAsync(oldAssigneeId.Value);
+            oldName = oldUser?.Username;
+        }
+        string? newName = null;
+        if (assigneeId.HasValue)
+        {
+            var newUser = await _db.Users.FindAsync(assigneeId.Value);
+            newName = newUser?.Username;
+        }
+
+        // FR-12: записываем изменение исполнителя в историю (имена, не ID)
         _db.HistoryEntries.Add(new HistoryEntry
         {
             TicketId  = ticket.Id,
             AuthorId  = userId,
             Field     = "assignee",
-            OldValue  = oldAssigneeId.HasValue ? oldAssigneeId.Value.ToString() : null,
-            NewValue  = assigneeId.HasValue ? assigneeId.Value.ToString() : "null",
+            OldValue  = oldName,
+            NewValue  = newName ?? "снят",
             CreatedAt = DateTime.UtcNow
         });
 
