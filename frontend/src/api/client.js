@@ -1,5 +1,8 @@
 // базовый HTTP клиент - добавляет токен к каждому запросу
 
+// в проде берём URL бэкенда из env, локально используем прокси vite
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
+
 function getToken() {
   return localStorage.getItem('token')
 }
@@ -19,7 +22,7 @@ export async function request(url, options = {}) {
     Object.assign(headers, options.headers)
   }
 
-  const response = await fetch('/api' + url, {
+  const response = await fetch(API_BASE + url, {
     ...options,
     headers,
   })
