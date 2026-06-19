@@ -1,0 +1,8 @@
+[build]
+dockerfilePath = "backend/Dockerfile"
+buildCommand = ""
+
+[deploy]
+startCommand = ""
+healthcheckPath = "/api/categories"
+restartPolicyType = "on_failure"
